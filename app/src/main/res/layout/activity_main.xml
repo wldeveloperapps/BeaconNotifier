@@ -9,30 +9,28 @@
 
     <ImageView
         android:id="@+id/imageViewSacyr"
-        android:layout_width="151dp"
-        android:layout_height="91dp"
+        android:layout_width="113dp"
+        android:layout_height="150dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="1dp"
+        android:layout_marginTop="8dp"
+        android:keepScreenOn="true"
         android:padding="2dp"
-        android:scaleType="centerCrop"
+        android:scaleType="fitXY"
         app:layout_constraintEnd_toStartOf="@+id/textViewDatosPersonales"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/id_card_ex"
-        tools:srcCompat="@drawable/id_card_ex" />
+        app:srcCompat="@drawable/foto"
+        tools:srcCompat="@drawable/foto" />
 
     <TextView
         android:id="@+id/textViewDatosPersonales"
-        android:layout_width="182dp"
-        android:layout_height="101dp"
-        android:layout_marginStart="9dp"
+        android:layout_width="201dp"
+        android:layout_height="93dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
         android:fontFamily="sans-serif-condensed"
         android:padding="2dp"
         android:scrollbars="none"
-        android:text="Michael Born. Construction Department"
+        android:text="Luis Perez\nID:123456\nDepartmento Construccion\nTfn:+34 689 556 342"
         android:textAlignment="gravity"
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
         android:textSize="18sp"
@@ -41,23 +39,30 @@
         app:layout_constraintTop_toTopOf="parent" />
 
 
-    <View
-        android:id="@+id/divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?android:attr/listDivider" />
+    <ImageView
+        android:id="@+id/imageViewSacyrId"
+        android:layout_width="198dp"
+        android:layout_height="58dp"
+        android:keepScreenOn="true"
+        android:padding="2dp"
+        android:scaleType="fitXY"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/imageViewSacyr"
+        app:layout_constraintTop_toBottomOf="@+id/textViewDatosPersonales"
+        app:srcCompat="@drawable/baccode"
+        tools:srcCompat="@drawable/baccode" />
 
     <TextView
         android:id="@+id/textViewAviso"
-        android:layout_width="343dp"
-        android:layout_height="73dp"
+        android:layout_width="347dp"
+        android:layout_height="93dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:background="@drawable/borde"
-        android:fontFamily="sans-serif-smallcaps"
+        android:fontFamily="sans-serif-black"
         android:scrollbars="vertical"
-        android:text="1234567890"
+        android:text="Hola"
         android:textAlignment="gravity"
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
         android:textSize="18sp"
@@ -67,70 +72,134 @@
 
     <FrameLayout
         android:id="@+id/contenedorFraments"
-        android:layout_width="342dp"
-        android:layout_height="229dp"
+        android:layout_width="392dp"
+        android:layout_height="209dp"
         android:layout_margin="8dp"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textViewAviso">
 
     </FrameLayout>
 
+    <ImageView
+        android:id="@+id/imageBack"
+        android:layout_width="379dp"
+        android:layout_height="140dp"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="2dp"
+        android:scaleType="fitXY"
+        android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/contenedorFraments"
+        app:srcCompat="@drawable/back"
+        tools:srcCompat="@drawable/back"
+        tools:visibility="visible" />
+
+    <ImageButton
+        android:id="@+id/imageButtonCancelarManDown"
+        android:layout_width="151dp"
+        android:layout_height="138dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/circular_button"
+        android:scaleType="fitXY"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/contenedorFraments"
+        app:srcCompat="@drawable/cancelar" />
+
+    <ImageButton
+        android:id="@+id/imageButtonPanic"
+        android:layout_width="145dp"
+        android:layout_height="137dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/circular_button"
+        android:scaleType="fitXY"
+        android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/contenedorFraments"
+        app:srcCompat="@drawable/sos" />
+
     <RadioButton
         android:id="@+id/radioButtonGPS"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:checked="false"
         android:clickable="false"
+        android:drawableRight="@android:drawable/ic_menu_mylocation"
         android:padding="2dp"
-        android:text="GPS"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/toggleButtonAlarmaProximidad"
-        app:layout_constraintStart_toEndOf="@+id/radioButtonGPRS" />
+        app:layout_constraintStart_toEndOf="@+id/radioButtonMOV"
+        app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
 
     <RadioButton
         android:id="@+id/radioButtonGPRS"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="2dp"
         android:layout_marginBottom="8dp"
         android:checked="false"
         android:clickable="false"
-        android:text="MQTT"
+        android:drawableRight="@android:drawable/ic_menu_upload"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/radioButtonMOV"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
+
+    <RadioButton
+        android:id="@+id/radioButtonMOV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="2dp"
+        android:layout_marginBottom="8dp"
+        android:checked="false"
+        android:clickable="false"
+        android:drawableRight="@android:drawable/ic_menu_always_landscape_portrait"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/radioButtonGPS"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@+id/radioButtonGPRS"
+        app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
 
-    <ToggleButton
-        android:id="@+id/toggleButtonAlarmaProximidad"
-        android:layout_width="153dp"
-        android:layout_height="47dp"
-        android:layout_marginStart="24dp"
+    <TextView
+        android:id="@+id/textViewRssi"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="32dp"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
+
+    <SeekBar
+        android:id="@+id/seekBarProximidad"
+        style="@android:style/Widget.Material.SeekBar"
+        android:layout_width="150dp"
+        android:layout_height="35dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:checked="true"
-        android:text="ToggleButton"
-        android:textOff="PROXIMIDAD OFF"
-        android:textOn="PROXIMIDAD ON"
+        android:max="110"
+        android:progress="1"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/radioButtonGPS" />
-
-    <ImageButton
-        android:id="@+id/imageButtonPanic"
-        android:layout_width="158dp"
-        android:layout_height="145dp"
-        android:layout_marginStart="104dp"
-        android:layout_marginTop="12dp"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/contenedorFraments"
-        app:srcCompat="@drawable/panic" />
+        app:layout_constraintStart_toEndOf="@+id/radioButtonGPS"
+        app:layout_constraintTop_toBottomOf="@+id/imageBack" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

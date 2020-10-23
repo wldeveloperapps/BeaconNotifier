@@ -5,15 +5,32 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
+import android.os.CountDownTimer;
 
 //********************************************************************************************************
-public class ShakeListener implements SensorEventListener {
+public class ShakeHelper implements SensorEventListener {
+    /*
     private static final int FORCE_THRESHOLD = 350;
     private static final int TIME_THRESHOLD = 100;
     private static final int SHAKE_TIMEOUT = 500;
     private static final int SHAKE_DURATION = 1000;
     private static final int SHAKE_COUNT = 3;
+    */
+    private static final int FORCE_THRESHOLD = 350;
+    private static final int FORCE_MOV = 150;
+    private static final int TIME_THRESHOLD = 100;
+    private static final int SHAKE_TIMEOUT = 500;
+    private static final int SHAKE_DURATION = 1000;
+    private static final int SHAKE_COUNT = 3;
+
+    private static final int MOV_COUNT = 10;
+    private static final long MOV_TIMEOUT = 30000;
+    private static final int TIME_GUARD = 5000; //Tiempo para que no se repita el impacto despues de dispararlo
+    private static final int TIME_PRESHAKE = 5000;
+    private static final int EJE_HORIZONTAL = 1;//eje Y
+    private static final double EJE_HORIZONTAL_MAX_VALUE = 3.0;
+
+    private static final int NUMERO_MUESTRAS_HORIZONTAL = 15;
     /*
     private static final int FORCE_THRESHOLD = 350;
     private static final int TIME_THRESHOLD = 100;
@@ -24,38 +41,61 @@ public class ShakeListener implements SensorEventListener {
     private SensorManager mSensorMgr;
     private float mLastX = -1.0f, mLastY = -1.0f, mLastZ = -1.0f;
     private long mLastTime;
+    private boolean mGuardTime = false;
     private OnShakeListener mShakeListener;
+    private OnMovementListener mMovementListener;
     private Context mContext;
     private int mShakeCount = 0;
+    private int mMovCount = 0;
     private long mLastShake;
+    private long mLastMov;
     private long mLastForce;
-    private boolean estadoHorizontal=false;
+    private boolean chkestadoHorizontal = false;
+    private int muestras = NUMERO_MUESTRAS_HORIZONTAL;
 
     private int forceThreshold = FORCE_THRESHOLD;
     private int timeThreshold = TIME_THRESHOLD;
     private int shakeTimeout = SHAKE_TIMEOUT;
     private int shakeDuration = SHAKE_DURATION;
     private int shakeCount = SHAKE_COUNT;
+    private long timePreShake=TIME_GUARD;
+    private long timeGuard=TIME_GUARD;
+
+    private int forceMovement = FORCE_MOV;
+    private int movCount = MOV_COUNT;
+    private long movTimeOut = MOV_TIMEOUT;
+
+
+    private boolean movement = false;
 
     //******************************************************************************************************************************************
     public interface OnShakeListener {
         public void onShake();
     }
 
+    public interface OnMovementListener {
+        public void onMove(boolean mov);
+    }
+
     //******************************************************************************************************************************************
-    public ShakeListener(Context context) {
+    public ShakeHelper(Context context) {
         mContext = context;
         //resume();
     }
 
     //******************************************************************************************************************************************
-    public ShakeListener(Context context, int _forceThreshold, int _timeThreshold, int _shakeTimeout, int _shakeDuration, int _shakeCount) {
+    public ShakeHelper(Context context, int _forceThreshold, int _forceMovement, int _timeThreshold, int _shakeTimeout, int _shakeDuration, int _shakeCount, long _timePreShake,long _timeGuard,int _movCount, long _movTimeOut) {
         mContext = context;
         forceThreshold = _forceThreshold;
         timeThreshold = _timeThreshold;
         shakeTimeout = _shakeTimeout;
         shakeDuration = _shakeDuration;
         shakeCount = _shakeCount;
+        forceMovement = _forceMovement;
+        movCount = _movCount;
+        movTimeOut = _movTimeOut;
+        timePreShake=_timePreShake;
+        timeGuard=_timeGuard;
     }
 
     //******************************************************************************************************************************************
@@ -63,9 +103,14 @@ public class ShakeListener implements SensorEventListener {
         mShakeListener = listener;
     }
 
+    public void setOnMovementListener(OnMovementListener listener) {
+        mMovementListener = listener;
+    }
+
     //******************************************************************************************************************************************
     public void resume() {
         mSensorMgr = (SensorManager) mContext.getSystemService(mContext.SENSOR_SERVICE);
+        movement = false;
         if (mSensorMgr == null) {
             throw new UnsupportedOperationException("Sensors not supported");
         }
@@ -91,8 +136,15 @@ public class ShakeListener implements SensorEventListener {
     }
 
     //******************************************************************************************************************************************
+    private void checkMovement(boolean ahora, boolean antes) {
+        if (antes) mMovementListener.onMove(false);
+        else mMovementListener.onMove(true);
+    }
+
+    //******************************************************************************************************************************************
     private boolean calculate(float ax, float ay, float az) {
         boolean shake = false;
+        boolean lastmov = movement;
         try {
             long now = System.currentTimeMillis();
             if ((now - mLastForce) > shakeTimeout) {
@@ -101,10 +153,33 @@ public class ShakeListener implements SensorEventListener {
             if ((now - mLastTime) > timeThreshold) {
                 long diff = now - mLastTime;
                 float speed = Math.abs(ax + ay + az - mLastX - mLastY - mLastZ) / diff * 10000;
+                if (speed > forceMovement) {
+                    mLastMov = 0;
+                    if (++mMovCount >= movCount) {
+                        mMovCount = movCount;
+                        movement = true;
+                    }
+                } else {
+                    if (--mMovCount <= 0) {
+                        if (mLastMov == 0) mLastMov = now;
+                        else {
+                            if (now - mLastMov > movTimeOut) {
+                                movement = false;
+                                mLastMov = 0;
+                            }
+                        }
+                        mMovCount = 0;
+                    }
+                }
+                if (movement != lastmov) checkMovement(movement, lastmov);
                 if (speed > forceThreshold) {
                     if ((++mShakeCount >= shakeCount) && (now - mLastShake > shakeDuration)) {
                         mLastShake = now;
                         mShakeCount = 0;
+                        if (!movement) {
+                            movement = true;
+                            checkMovement(movement, false);
+                        }
                         shake = true;
                     }
                     mLastForce = now;
@@ -121,26 +196,43 @@ public class ShakeListener implements SensorEventListener {
 
     //******************************************************************************************************************************************
     @Override
-    public void onSensorChanged(SensorEvent event) {
+    public void onSensorChanged(final SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            //Log.d("ACC", String.format("X:%f,Y:%f,Z:%f", event.values[0], event.values[1], event.values[2]));
-            if(!estadoHorizontal){
+            // Log.d("ACC", String.format("X:%f,Y:%f,Z:%f", event.values[0], event.values[1], event.values[2]));
+            if (!chkestadoHorizontal) {
                 if (calculate(event.values[0], event.values[1], event.values[2])) {
-                    estadoHorizontal=true;
+                    chkestadoHorizontal = true;
+                    new CountDownTimer(timePreShake, 1000) {
+                        public void onTick(long millisUntilFinished) {
+                            if (!checkHorizontal(event.values[EJE_HORIZONTAL])) {
+                                chkestadoHorizontal = false;
+                                cancel();
+                            }
+                        }
+                        public void onFinish() {
+                            mGuardTime = true;
+                            mShakeListener.onShake();
+                        }
+                    }.start();
                 }
-            }else{
-                if (checkHorizontal(event.values[0], event.values[1], event.values[2])) {
-                    mShakeListener.onShake();
+            } else {
+                if (mGuardTime == true) {
+                    mGuardTime = false;
+                    new CountDownTimer(timeGuard, timeGuard / 2) {
+                        public void onTick(long millisUntilFinished) {
+                        }
+                        public void onFinish() {
+                            chkestadoHorizontal =false;
+                        }
+                    }.start();
                 }
-                estadoHorizontal=false;
             }
         }
     }
 
-    //******************************************************************************************************************************************
-    private boolean checkHorizontal(float x, float y, float z) {
-        if (Math.abs(y) < 1.0)
-            return true;
-        return false;
+    //*****************************************************************************************************************************************
+    private boolean checkHorizontal(float eje) {
+        //Log.d("ACC", String.format("checkHorizontal"));
+        return (Math.abs(eje) < EJE_HORIZONTAL_MAX_VALUE);
     }
 }
