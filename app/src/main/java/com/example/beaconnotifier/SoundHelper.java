@@ -6,13 +6,17 @@ import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.os.CountDownTimer;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static android.content.Context.AUDIO_SERVICE;
 
 //*****************************************************************************************************************
 public class SoundHelper {
     private Context context;
     private MediaPlayer mp;
-    private AudioManager audioManager = null;
+    private AudioManager audioManager;
     private SoundPool soundPool;
     private int soundIDAlarm;
     private int soundIDBeep;
@@ -20,12 +24,12 @@ public class SoundHelper {
     private float volume, maxVolume;
     private CountDownTimer countDown;
     private int actualSound;
-    public final int S_ALARMA=0;
-    public final int S_BEEP=1;
+    private Map<Integer, Integer> soundsCollection = new HashMap<Integer, Integer>();
 
     //*****************************************************************************************************************
-    SoundHelper(Context ctx, int alarmSound, int beepSound) {
+    SoundHelper(Context ctx, List<Integer> bSounds) {
         try {
+            int ID=0;
             context = ctx;
             audioManager = (AudioManager) ctx.getSystemService(AUDIO_SERVICE);
             float actVolume = (float) audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
@@ -38,8 +42,10 @@ public class SoundHelper {
                     loaded = true;
                 }
             });
-            soundIDAlarm = soundPool.load(context, alarmSound, 1);
-            soundIDBeep = soundPool.load(context, beepSound, 1);
+            for (Integer entry : bSounds) {
+                ID = soundPool.load(context, entry, 1);
+                soundsCollection.put(entry,ID);
+            }
         } catch (Exception e) {
             throw e;
         }
@@ -48,20 +54,13 @@ public class SoundHelper {
 
 
     //*****************************************************************************************************************
-    public void playSound(int vol, long timeout,int tipo) {
+    public void playSound(int vol, long timeout,int sound) {
         try {
             if (loaded && !plays) {
                 if (vol >= 0) {
                     setVolume((int) ((vol * maxVolume) / 100.0));
                 }
-                switch (tipo){
-                    case S_ALARMA:
-                        actualSound=soundPool.play(soundIDAlarm, volume, volume, 1,10 , 1f);
-                        break;
-                    case S_BEEP:
-                        actualSound=soundPool.play(soundIDBeep, volume, volume, 1,10 , 1f);
-                        break;
-                }
+                actualSound=soundPool.play(soundsCollection.get(sound), volume, volume, 1,10 , 1f);
                 plays = true;
                 if(timeout>0){
                     new CountDownTimer(timeout, timeout/2) {

@@ -45,6 +45,7 @@ public class LightHelper  {
             sum += mMeasurements.get(i).lmx;
         }
         double runningAverage = sum/(endIndex-startIndex+1);
+        //Log.d("LUZ", "lm:"+runningAverage);
        return (int) Math.round(runningAverage);
     }
 

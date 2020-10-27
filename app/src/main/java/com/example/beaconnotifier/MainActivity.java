@@ -7,7 +7,6 @@ import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.RemoteException;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -23,44 +22,34 @@ import androidx.fragment.app.FragmentTransaction;
 
 import com.justadeveloper96.permissionhelper.PermissionHelper;
 
-import org.altbeacon.beacon.Beacon;
-import org.altbeacon.beacon.BeaconConsumer;
-import org.altbeacon.beacon.BeaconManager;
-import org.altbeacon.beacon.BeaconParser;
-import org.altbeacon.beacon.RangeNotifier;
-import org.altbeacon.beacon.Region;
-import org.altbeacon.beacon.service.ArmaRssiFilter;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-/*
-    ALTBEACON	        m:2-3=beac,i:4-19,i:20-21,i:22-23,p:24-24,d:25-25
-    EDDYSTONE  TLM	    x,s:0-1=feaa,m:2-2=20,d:3-3,d:4-5,d:6-7,d:8-11,d:12-15
-    EDDYSTONE  UID	    s:0-1=feaa,m:2-2=00,p:3-3:-41,i:4-13,i:14-19
-    EDDYSTONE  URL	    s:0-1=feaa,m:2-2=10,p:3-3:-41,i:4-20v
-    IBEACON	            m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24
-*/
+import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
+import no.nordicsemi.android.support.v18.scanner.ScanCallback;
+import no.nordicsemi.android.support.v18.scanner.ScanFilter;
+import no.nordicsemi.android.support.v18.scanner.ScanResult;
+import no.nordicsemi.android.support.v18.scanner.ScanSettings;
+
 //****************************************************************************************************************
-public class MainActivity extends AppCompatActivity implements RangeNotifier, BeaconConsumer {
+public class MainActivity extends AppCompatActivity {
     protected static final String TAG = "LCF";
 
-    private String deviceId = "123456789";
+    private String deviceId = "";
     //*****************************************************************************************************************
     private static final int MAX_VECES_INZONE = 2;
-    private static final int RSSI_PROXIMITY_MINIMO = -95;
+    private static final int RSSI_PROXIMITY_MINIMO = -86;
     private static final int RSSI_OWNERZONE_MINIMO = -65;
     private static final long TIMEOUT_CHK_OWNERZONE = 10000;
-    private static final long TIMEOUT_CHK_PROXIMITY = 2000;
+    private static final long TIMEOUT_CHK_PROXIMITY = 500;
     private static final long TIMEOUT_PREALARM_CAIDA = 15000;
     private static final int SEND_GPS_MOVIMIENTO = 5000;
     private static final int SEND_GPS_PARADO = 30000;
@@ -75,36 +64,51 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     private final static String MQTT_CLIENTE = "CHK_SACYR";
 
     //*****************************************************************************************************************
-    private BeaconManager beaconManager;
-    private List<String> filtros = new ArrayList<String>();
-    private String IBEACON_MASK = "m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24";
-    // private String IBEACON_MASK = "m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24,m:27-28=5749";
-    //private String IBEACON_EMB ="m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24,m:20-21=04D2,m:22-23=162E";
-    private String IBEACON_EMB = "m:2-3=0215,i:4-19,m:20-21=04D2,i:22-23,p:24-24";
-    private final static double ARMA_COEFF = 1.0;
-    private final static int NIVEL_LUZ = 50;
+    private BluetoothLeScannerCompat scanner;
+    private List<ScanFilter> filters = new ArrayList<>();
+    private ScanSettings settings;
+    private boolean scanRunning = false;
+
+
+    private final static int NIVEL_LUZ = 10;
     private final static int INCREMENTO_RSSI_CUERPO = -10;
     private final static int BRILLO_MAX = 100;
     private final static int BRILLO_MIN = 3;
     private boolean onLuz = true;
     //*****************************************************************************************************************
-    Map<String, Integer> mapbeacons = new HashMap<String, Integer>();
+    Map<String, Integer> mapbeacons = new HashMap<>();
     private int rssiProximity = RSSI_PROXIMITY_MINIMO;
     private int rssiOwnerZone = RSSI_OWNERZONE_MINIMO;
-    private int alarmaProximidad = 0;
+    private  boolean hayProximidad = false;
+    private boolean hayDatos = false;
+    //
+    private final static double ARMA_COEFF = 0.6;
+    private boolean conFiltro = true;
+    //
+    private final static int ST_REPOSO = 0;
+    private final static int ST_PREALARMA_1 = ST_REPOSO + 1;
+    private final static int ST_PREALARMA_2 = ST_REPOSO + 2;
+    private final static int ST_PREALARMA_3 = ST_REPOSO + 3;
+    private final static int ST_ALARMA = ST_REPOSO + 4;
+    private int estado = ST_REPOSO;
     private CountDownTimer countDownTimerOWNERZONE;
     private CountDownTimer countDownTimerPROXIMITY;
     private ReentrantLock lockBeaconsOWNERZONE = new ReentrantLock();
-    private Map<String, Integer> beaconOWNERZONE = new HashMap<String, Integer>();
+    private Map<String, Integer> beaconOWNERZONE = new HashMap<>();
     private boolean analizaProximidad = true;
-    private boolean analizaOWNERZONE = true;
+    private boolean analizaOWNERZONE = false;
     private boolean firstTimeOWNERZONE = false;
+    //*****************************************************************************************************************
+    private double armaSpeed = ARMA_COEFF;
+    private boolean armaisInitialized = false;
+    private Map<String, Integer> beaconARMA = new HashMap<>();
     //*****************************************************************************************************************
     FragmentTransaction transaction;
     Fragment fragmentLocation;
     //*****************************************************************************************************************
     private ShakeHelper mShaker = null;
     private SoundHelper mSound = null;
+    private List<Integer> soundCollection = new ArrayList<>();
     private LightHelper mLight = null;
     //*****************************************************************************************************************
     private TextView textViewAviso, textViewRssi;
@@ -171,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
                 @Override
                 public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
                     setMqttMessage(topic, mqttMessage.toString());
+
                 }
 
                 @Override
@@ -191,9 +196,6 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
         if (topic.contains("IMSG")) {
             Tools.soundRing(RingtoneManager.TYPE_RINGTONE, 500);
             muestraAviso(message);
-            if (message.toLowerCase() == "apaga") {
-
-            }
         }
     }
 
@@ -233,7 +235,10 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
                     Manifest.permission.SEND_SMS,
                     Manifest.permission.READ_PHONE_STATE,
                     Manifest.permission.INTERNET,
-                    Manifest.permission.MODIFY_AUDIO_SETTINGS
+                    Manifest.permission.MODIFY_AUDIO_SETTINGS,
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION
             };
             permissionHelper.requestPermission(needed_permissions, 100);
         } catch (Exception e) {
@@ -317,29 +322,27 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
             textViewAviso = (TextView) findViewById(R.id.textViewAviso);
             textViewRssi = (TextView) findViewById(R.id.textViewRssi);
             textViewAviso.setMovementMethod(new ScrollingMovementMethod());
-            mSound = new SoundHelper(this, R.raw.alarm1, R.raw.beep2);
+            soundCollection.add(R.raw.alarm1);
+            soundCollection.add(R.raw.beep2);
+            mSound = new SoundHelper(this, soundCollection);
             mLight = new LightHelper(this, NIVEL_LUZ);
             mLight.setOnLightListener(new LightHelper.OnLightListener() {
                 @Override
                 public void onLight(boolean luz) {
                     if (!luz) {
                         //    rssiProximity-=INCREMENTO_RSSI_CUERPO;
-//                        rssiOwnerZone-=INCREMENTO_RSSI_CUERPO;
+                        //    rssiOwnerZone-=INCREMENTO_RSSI_CUERPO;
                         Tools.setBrillo(BRILLO_MIN);
                     } else {
-                        //                      rssiProximity+=INCREMENTO_RSSI_CUERPO;
-                        //                    rssiOwnerZone+=INCREMENTO_RSSI_CUERPO;
+                        //    rssiProximity+=INCREMENTO_RSSI_CUERPO;
+                        //    rssiOwnerZone+=INCREMENTO_RSSI_CUERPO;
                         if (onMovement) Tools.setBrillo(BRILLO_MAX);
                     }
-                    /*
-                    if(rssiProximity>0)rssiProximity=0;
-                    if(rssiOwnerZone>0)rssiOwnerZone=0;
-                    seekBarProximidad.setProgress(rssiProximity);
-                    */
                     Log.e(TAG, "luz:" + luz);
                     onLuz = luz;
                 }
             });
+
             mShaker = new ShakeHelper(this);
             mShaker.setOnShakeListener(new ShakeHelper.OnShakeListener() {
                 public void onShake() {
@@ -369,7 +372,8 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
                         }
                     } else {
                         cambiaLocationParam(SEND_GPS_PARADO, SEND_GPS_PARADO);
-                        Tools.setBrillo(BRILLO_MIN);
+                        //Tools.setBrillo(BRILLO_MIN);
+                        Tools.setBrillo(BRILLO_MAX);
                     }
                 }
             });
@@ -405,18 +409,14 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     rssiProximity = progress * -1;
                     textViewRssi.setText("" + rssiProximity + "dBm");
-                    analizaOWNERZONE = rssiProximity == 0;
                 }
-
                 public void onStartTrackingTouch(SeekBar seekBar) {
                 }
-
                 public void onStopTrackingTouch(SeekBar seekBar) {
                 }
             });
-
             setButtonPanicActive(true);
-            Tools.setBluetoothOnOffCycle(1000);
+            //Tools.setBluetoothOnOffCycle(1000);
         } catch (Exception e) {
             Error("setComponents:" + e.toString());
         }
@@ -478,7 +478,7 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     //*****************************************************************************************************************
     private void alarma(int msec) {
         Tools.vibra(Tools.VIBRACION_TIPO_1);
-        mSound.playSound(-1, msec, mSound.S_ALARMA);
+        mSound.playSound(-1, msec, R.raw.alarm1);
     }
 
     //*****************************************************************************************************************
@@ -507,8 +507,7 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     //****************************************************************************************************************
     private void preAlarmaProximidad() {
         try {
-
-            mSound.playSound(-1, 600, mSound.S_BEEP);
+            mSound.playSound(-1, 600, R.raw.beep2);
             muestraAviso("Prealerta proximidad...");
         } catch (Exception e) {
             Error("preAlarmaProximidad:" + e.toString());
@@ -529,15 +528,32 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     }
 
     //*****************************************************************************************************************
+/*
+    ScanFilters
+    You can pass a list of ScanFilters.
+    They define what beacon advertisements you want to be notified of, when in range. You can create a ScanFilter with a ScanFilter.Builder. You can filter on many parameters.
+    If you want to filter based on the iBeacon spec, it's best to use the
+    ScanFilter.Builder setManufacturerData (int manufacturerId, byte[] manufacturerData, byte[] manufacturerDataMask). You can filter with it on uuid, major and minor.
+    As you see you need to set an int and 2 byte arrays. The manufacturerId is not very important. But the manufacturerData is! Y
+    ou can create a byte array that matches the byte array that is advertised by the beacon!
+    And to make it even more cool, you can use the manufacturerDataMask to tell what bytes should match, and what bytes shouldn't.
+    This way you can scan for all beacons with a fixed uuid, but any major or minor! Any combination is possible really.
+    This utils class showcases how to create such byte arrays.
+    */
     private void setBeacons() {
         try {
-            beaconManager = (BeaconManager) BeaconManager.getInstanceForApplication(this);
-            beaconManager.setForegroundScanPeriod(BEACON_SCAN_FOREGROUND);
-            beaconManager.setForegroundBetweenScanPeriod(BEACON_BETWEEN_SCAN_FOREGROUND);
-            filtros.add(IBEACON_EMB);
-            setFilterBeacon(filtros);
-            beaconManager.setDebug(false);
-            analizaOWNERZONE = false;
+            scanner = BluetoothLeScannerCompat.getScanner();
+            settings = new ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .setReportDelay(0)
+                    .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                    .setUseHardwareBatchingIfSupported(true)
+                    .setUseHardwareFilteringIfSupported(false)
+                    .build();
+            filters.add(new ScanFilter.Builder().setDeviceAddress("0C:F3:EE:71:66:7C").build());
+            filters.add(new ScanFilter.Builder().setDeviceAddress("0C:F3:EE:72:A9:41").build());
+            //filters.add(setUUIDFilter("699EBC80-E1F3-11E3-9A0F-0CF3EE3BC012"));
+            //filters.add(setibeaconMajorFilter("04D2"));
             startCheckOWNERZONE();
             startCheckPROXIMITY();
         } catch (Exception e) {
@@ -545,20 +561,101 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
         }
     }
 
+    private ScanFilter setibeaconMajorFilter(String  major) {
+        // Empty data
+        byte[] manData = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        // Data Mask
+        byte[] mask = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0};
+        // Copy UUID into data array and remove all "-"
+        System.arraycopy(Tools.hexStringToByteArray(major), 0, manData, 18, 2);
+        // Add data array to filters
+        return new ScanFilter.Builder().setManufacturerData(76, manData, mask).build();
+    }
+    private ScanFilter setibeaconMinorFilter(String  minor) {
+        // Empty data
+        byte[] manData = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        // Data Mask
+        byte[] mask = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0};
+        // Copy UUID into data array and remove all "-"
+        System.arraycopy(Tools.hexStringToByteArray(minor), 0, manData, 20, 2);
+        // Add data array to filters
+        return new ScanFilter.Builder().setManufacturerData(76, manData, mask).build();
+    }
+
+    private ScanFilter setibeaconMajorMinorFilter(String  major,String minor) {
+        // Empty data
+        byte[] manData = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        // Data Mask
+        byte[] mask = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0};
+        // Copy UUID into data array and remove all "-"
+        System.arraycopy(Tools.hexStringToByteArray(major), 0, manData, 18, 2);
+        System.arraycopy(Tools.hexStringToByteArray(minor), 0, manData, 20, 2);
+        // Add data array to filters
+        return new ScanFilter.Builder().setManufacturerData(76, manData, mask).build();
+    }
+
+    private ScanFilter setUUIDFilter(String uuid) {
+        // Empty data
+        byte[] manData = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        // Data Mask
+        byte[] mask = new byte[]{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
+        // Copy UUID into data array and remove all "-"
+        System.arraycopy(Tools.hexStringToByteArray(uuid.replace("-", "")), 0, manData, 2, 16);
+        // Add data array to filters
+        return new ScanFilter.Builder().setManufacturerData(76, manData, mask).build();
+    }
+
     private void startCheckPROXIMITY() {
         try {
             countDownTimerPROXIMITY = new CountDownTimer(Long.MAX_VALUE, TIMEOUT_CHK_PROXIMITY) {
                 public void onTick(long millisUntilFinished) {
-                    switch (alarmaProximidad) {
-                        case 0:
-                            break;
-                        case 1:
-                        case 2:
-                            preAlarmaProximidad();
-                            break;
-                        default:
-                            alarmaProximidad--;
-                            alarmaProximidad();
+                    Log.d(TAG, "D:" + getHayDatos() + ",P:"+getHayProximidad());
+                    if (getHayDatos()) {
+                        switch (estado) {
+                            case ST_REPOSO:
+                                if (getHayProximidad()) {
+                                    estado = ST_PREALARMA_1;
+                                    preAlarmaProximidad();
+                                }
+                                break;
+                            case ST_PREALARMA_1:
+                                if (getHayProximidad()) {
+                                    estado = ST_PREALARMA_2;
+                                    preAlarmaProximidad();
+                                } else {
+                                    estado = ST_REPOSO;
+                                }
+                                break;
+                            case ST_PREALARMA_2:
+                                if (getHayProximidad()) {
+                                    estado = ST_ALARMA;
+                                    preAlarmaProximidad();
+                                } else {
+                                    estado = ST_PREALARMA_1;
+                                }
+                            case ST_PREALARMA_3:
+                                if (getHayProximidad()) {
+                                    estado = ST_ALARMA;
+                                    preAlarmaProximidad();
+                                } else {
+                                    estado = ST_PREALARMA_2;
+                                }
+                            case ST_ALARMA:
+                                if (getHayProximidad()) {
+                                    alarmaProximidad();
+                                } else {
+                                    estado = ST_PREALARMA_3;
+                                }
+                                break;
+                            default:
+                                estado = ST_REPOSO;
+                        }
+                        setHayProximidad(false);
+                        setHayDatos(false);
+                    } else {
+                        muestraAviso("");
+                        estado = ST_REPOSO;
+                        hayProximidad = false;
                     }
                 }
 
@@ -570,6 +667,20 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
             Error("startCheckProximity:" + e.toString());
         }
     }
+    //**************************************************************************************
+    private synchronized boolean getHayProximidad(){
+        return hayProximidad;
+    }
+    private synchronized void setHayProximidad(boolean set){
+        hayProximidad=set;
+    }
+    private synchronized boolean getHayDatos(){
+        return hayDatos;
+    }
+    private synchronized void setHayDatos(boolean set){
+        hayDatos=set;
+    }
+    //**************************************************************************************
 
     private List<String> checkRepeated(List<String> list) {
         return lastBad = list;
@@ -662,46 +773,6 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
         }
     }
 
-    //****************************************************************************************************************
-    /*
-     * This filter calculates its rssi on base of an auto regressive moving average (ARMA)
-     * It needs only the current value to do this; the general formula is  n(t) = n(t-1) - c * (n(t-1) - n(t))
-     * where c is a coefficient, that denotes the smoothness - the lower the value, the smoother the average
-     * Note: a smoother average needs longer to "settle down"
-     * Note: For signals, that change rather frequently (say, 1Hz or faster) and tend to vary more a recommended
-     *       value would be 0,1 (that means the actual value is changed by 10% of the difference between the
-     *       actual measurement and the actual average)
-     *       For signals at lower rates (10Hz) a value of 0.25 to 0.5 would be appropriate
-     * private static double DEFAULT_ARMA_SPEED = 0.1;     //How likely is it that the RSSI value changes?
-                                                        //Note: the more unlikely, the higher can that value be
-                                                        //      also, the lower the (expected) sending frequency,
-                                                        //      the higher should that value be
-     */
-    private void setFilterBeacon(List<String> beacons) {
-        try {
-
-            //Average
-            //BeaconManager.setRssiFilterImplClass(RunningAverageRssiFilter.class);
-            //RunningAverageRssiFilter.setSampleExpirationMilliseconds(5000L);
-
-            //Arma
-            BeaconManager.setRssiFilterImplClass(ArmaRssiFilter.class);
-            ArmaRssiFilter.setDEFAULT_ARMA_SPEED(ARMA_COEFF);
-
-            //Kalman
-            //BeaconManager.setRssiFilterImplClass(KalmanRssiFilter.class);
-            //KalmanRssiFilter.setSampleExpirationMilliseconds(5000L);
-            //KalmanRssiFilter.setKalmanFilterValues(0.5,0.008);
-
-            beaconManager.getBeaconParsers().clear();
-            for (String b : beacons) {
-                beaconManager.getBeaconParsers().add(new BeaconParser().
-                        setBeaconLayout(b));
-            }
-        } catch (Exception e) {
-            Error("setFilterBeacon:" + e.toString());
-        }
-    }
 
     //****************************************************************************************************************
     private void StopMandown() {
@@ -716,9 +787,14 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     //****************************************************************************************************************
     private void StopScanner() {
         try {
-            mLight.Pause();
-            beaconManager.removeAllRangeNotifiers();
-            beaconManager.unbind(this);
+
+            if (scanRunning) {
+                scanner.stopScan(mScanCallback);
+                scanRunning = false;
+            }
+            if (countDownTimerOWNERZONE != null) countDownTimerOWNERZONE.cancel();
+            if (countDownTimerPROXIMITY != null) countDownTimerPROXIMITY.cancel();
+
         } catch (Exception e) {
             Error("StopScanner:" + e.toString());
         }
@@ -727,9 +803,14 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     //****************************************************************************************************************
     private void StartScanner() {
         try {
-            mLight.Resume();
-            beaconManager.addRangeNotifier(this);
-            beaconManager.bind(this);
+            if (!scanRunning) {
+                beaconARMA.clear();
+                scanner.startScan(filters, settings, mScanCallback);
+                scanRunning = true;
+            }
+            if (countDownTimerOWNERZONE != null) countDownTimerOWNERZONE.start();
+            if (countDownTimerPROXIMITY != null) countDownTimerPROXIMITY.start();
+
         } catch (Exception e) {
             Error("StartScanner:" + e.toString());
         }
@@ -742,8 +823,7 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
             super.onResume();
             StartScanner();
             StartMandown();
-            if (countDownTimerOWNERZONE != null) countDownTimerOWNERZONE.start();
-            if (countDownTimerPROXIMITY != null) countDownTimerPROXIMITY.start();
+            mLight.Resume();
         } catch (Exception e) {
             Error("onResume:" + e.toString());
         }
@@ -754,9 +834,8 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
         try {
             super.onPause();
             StopScanner();
-            if (countDownTimerOWNERZONE != null) countDownTimerOWNERZONE.cancel();
-            if (countDownTimerPROXIMITY != null) countDownTimerPROXIMITY.cancel();
             StopMandown();
+            mLight.Pause();
         } catch (Exception e) {
             Error("onPause:" + e.toString());
         }
@@ -778,101 +857,99 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
     //****************************************************************************************************************
     //****************************************************************************************************************
     //****************************************************************************************************************
-    @Override
-    public void onBeaconServiceConnect() {
-        try {
-            beaconManager.startRangingBeaconsInRegion(new Region("ZonaDeteccion", null, null, null));
-            analizaOWNERZONE = true;
-        } catch (RemoteException e) {
-            Error("onBeaconServiceConnect:" + e.toString());
-            throw new RuntimeException(e);
+    private ScanCallback mScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(final int callbackType, final ScanResult result) {
+            try {
+                addRssiFilter(result.getDevice().getAddress(), result.getRssi());
+                if (analizaProximidad) checkAllBeacons(result);
+                if (analizaOWNERZONE) checkBeaconsOWNERZONE(result);
+                //Log.d(TAG, result.getDevice().getAddress() + "," + result.getRssi());
+            } catch (Exception e) {
+                Error("onScanResult:" + e.toString());
+            }
         }
-    }
+
+        @Override
+        public void onBatchScanResults(final List<ScanResult> results) {
+            try {
+                for (int i = 0; i < results.size(); i++) {
+                    addRssiFilter(results.get(i).getDevice().getAddress(), results.get(i).getRssi());
+                    if (analizaProximidad) checkAllBeacons(results.get(i));
+                    if (analizaOWNERZONE) checkBeaconsOWNERZONE(results.get(i));
+                }
+            } catch (Exception e) {
+                Error("onBatchScanResults:" + e.toString());
+            }
+        }
+
+        @Override
+        public void onScanFailed(final int errorCode) {
+            Log.e(TAG, "onScanFailed " + errorCode);
+        }
+    };
 
     //****************************************************************************************************************
-    @Override
-    public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
-        try {
-            if (analizaProximidad) checkBeaconsProximity(beacons);
-            if (analizaOWNERZONE) checkBeaconsOWNERZONE(beacons);
-        } catch (Exception e) {
-            Error("didRangeBeaconsInRegion:" + e.toString());
-        }
-    }
-
-    //****************************************************************************************************************
-    private boolean isBeaconOWNERZONE(Beacon beacon) {
+    private boolean isBeaconOWNERZONE(ScanResult beacon) {
         boolean result = false;
-        lockBeaconsOWNERZONE.lock();
-        result = beaconOWNERZONE.containsKey(beacon.getBluetoothAddress());
-        lockBeaconsOWNERZONE.unlock();
+        try {
+
+            lockBeaconsOWNERZONE.lock();
+            result = beaconOWNERZONE.containsKey(beacon.getDevice().getAddress());
+            lockBeaconsOWNERZONE.unlock();
+
+        } catch (Exception e) {
+            Error("isBeaconOWNERZONE:" + e.toString());
+        }
         return result;
     }
 
     //****************************************************************************************************************
-    private boolean checkAllBeacons(Beacon beacon) {
+    private void checkAllBeacons(ScanResult beacon) {
         try {
             if (isBeaconOWNERZONE(beacon)) {
-                return true;
             } else {
-                if (beacon.getRunningAverageRssi() >= rssiProximity) {
-                    alarmaProximidad++;
-                    return false;
+                setHayDatos(true);
+                if (getRssiFilter(beacon.getDevice().getAddress(), beacon.getRssi()) >= rssiProximity) {
+                    setHayProximidad(true);
+                } else {
                 }
             }
         } catch (Exception e) {
             Error("checkProximity:" + e.toString());
         }
-        return true;
     }
 
     //****************************************************************************************************************
-    private boolean _checkAllBeacons(Beacon beacon) {
+    private void _checkAllBeacons(ScanResult beacon) {
         try {
             if (isBeaconOWNERZONE(beacon)) {
-                return true;
             } else {
-                if (beacon.getRunningAverageRssi() >= rssiProximity) {
-                    if (mapbeacons.containsKey(beacon.toString())) {
-                        Integer cont = mapbeacons.get(beacon.toString()) + 1;
-                        mapbeacons.put(beacon.toString(), cont);
+                setHayDatos(true);
+                String addr = beacon.getDevice().getAddress();
+                if (getRssiFilter(addr, beacon.getRssi()) >= rssiProximity) {
+                    if (mapbeacons.containsKey(addr)) {
+                        Integer cont = mapbeacons.get(addr) + 1;
+                        //Log.d(TAG, addr + "," + cont + "," + beacon.getRssi());
+                        mapbeacons.put(addr, cont);
                         if (cont >= MAX_VECES_INZONE) {
                             mapbeacons.clear();
-                            alarmaProximidad++;
-                            return false;
+                            setHayProximidad(true);
                         }
                     } else {
-                        mapbeacons.put(beacon.toString(), 0);
+                        mapbeacons.put(addr, 0);
                     }
                 } else {
-                    if (mapbeacons.containsKey(beacon.toString())) {
-                        mapbeacons.put(beacon.toString(), 0);
+                    if (mapbeacons.containsKey(addr)) {
+                        mapbeacons.put(addr, 0);
                     }
                 }
             }
         } catch (Exception e) {
             Error("checkProximity:" + e.toString());
         }
-        return true;
     }
 
-    //****************************************************************************************************************
-    private void checkBeaconsProximity(Collection<Beacon> beacons) {
-        try {
-            String str = "";
-            if (beacons.size() > 0) {
-                Iterator itr = beacons.iterator();
-                while (itr.hasNext()) {
-                    Beacon beacon = (Beacon) itr.next();
-                    Log.d(TAG, beacon.getBluetoothName() + "," + Math.round(beacon.getRunningAverageRssi()) + "," + beacon.getRssi() + "," + beacon.getBluetoothAddress());
-                    if (!checkAllBeacons(beacon)) return;
-                }
-            }
-            alarmaProximidad=0;
-        } catch (Exception e) {
-            Error("checkBeaconsProximity:" + e.toString());
-        }
-    }
 
     //****************************************************************************************************************
     private List<String> verifyBeaconsOWNERZONE() {
@@ -894,18 +971,15 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
 
 
     //****************************************************************************************************************
-    private void checkBeaconsOWNERZONE(Collection<Beacon> beacons) {
+    private void checkBeaconsOWNERZONE(ScanResult beacon) {
         lockBeaconsOWNERZONE.lock();
         try {
-            if (beacons.size() > 0 && beaconOWNERZONE.size() > 0) {
-                Iterator itr = beacons.iterator();
-                while (itr.hasNext()) {
-                    Beacon beacon = (Beacon) itr.next();
-                    if (beaconOWNERZONE.containsKey(beacon.getBluetoothAddress())) {
-                        if (beacon.getRunningAverageRssi() >= rssiOwnerZone) {
-                            Integer cont = beaconOWNERZONE.get(beacon.getBluetoothAddress()) + 1;
-                            beaconOWNERZONE.put(beacon.getBluetoothAddress(), cont);
-                        }
+            if (beaconOWNERZONE.size() > 0) {
+                String addr = beacon.getDevice().getAddress();
+                if (beaconOWNERZONE.containsKey(addr)) {
+                    if (getRssiFilter(addr, beacon.getRssi()) >= rssiOwnerZone) {
+                        Integer cont = beaconOWNERZONE.get(addr) + 1;
+                        beaconOWNERZONE.put(addr, cont);
                     }
                 }
             }
@@ -937,5 +1011,41 @@ public class MainActivity extends AppCompatActivity implements RangeNotifier, Be
         //publica("ERROR",serialNumber+","+msg);
 
     }
+
+    //****************************************************************************************************************
+    //****************************************************************************************************************
+
+    private void clearRssiFilter() {
+        beaconARMA.clear();
+    }
+
+    //****************************************************************************************************************
+    private int getRssiFilter(String addr, int rssi) {
+        if (conFiltro) {
+            if (beaconARMA.containsKey(addr))
+                return beaconARMA.get(addr);
+        }
+        return rssi;
+    }
+
+    //****************************************************************************************************************
+    private int addRssiFilter(String addr, int rssi) {
+        int armaMeasurement = rssi;
+        try {
+            if (conFiltro) {
+                if (beaconARMA.containsKey(addr)) {
+                    armaMeasurement = beaconARMA.get(addr);
+                    armaMeasurement = Double.valueOf(armaMeasurement - armaSpeed * (armaMeasurement - rssi)).intValue();
+                }
+                Log.d(TAG, "ARMA:" + addr + "," + rssi + "," + armaMeasurement + "=" + (rssi - armaMeasurement));
+                beaconARMA.put(addr, armaMeasurement);
+            }
+        } catch (Exception e) {
+            Error("addRssiFilter:" + e.toString());
+        }
+        return armaMeasurement;
+    }
+    //****************************************************************************************************************
+
 
 }
