@@ -56,6 +56,9 @@ public class Tools {
 
     //****************************************************************************************************************
     static public void setBrillo(int porcentaje) {
+    }
+    //****************************************************************************************************************
+    static public void _setBrillo(int porcentaje) {
         float brightness = porcentaje / (float) 255;
         WindowManager.LayoutParams lp = win.getAttributes();
         lp.screenBrightness = brightness;

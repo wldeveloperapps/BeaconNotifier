@@ -7,57 +7,12 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <ImageView
-        android:id="@+id/imageViewSacyr"
-        android:layout_width="113dp"
-        android:layout_height="150dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:keepScreenOn="true"
-        android:padding="2dp"
-        android:scaleType="fitXY"
-        app:layout_constraintEnd_toStartOf="@+id/textViewDatosPersonales"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/foto"
-        tools:srcCompat="@drawable/foto" />
-
-    <TextView
-        android:id="@+id/textViewDatosPersonales"
-        android:layout_width="201dp"
-        android:layout_height="93dp"
-        android:layout_marginTop="8dp"
-        android:fontFamily="sans-serif-condensed"
-        android:padding="2dp"
-        android:scrollbars="none"
-        android:text="Luis Perez\nID:123456\nDepartmento Construccion\nTfn:+34 689 556 342"
-        android:textAlignment="gravity"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textSize="18sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/imageViewSacyr"
-        app:layout_constraintTop_toTopOf="parent" />
-
-
-    <ImageView
-        android:id="@+id/imageViewSacyrId"
-        android:layout_width="198dp"
-        android:layout_height="58dp"
-        android:keepScreenOn="true"
-        android:padding="2dp"
-        android:scaleType="fitXY"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/imageViewSacyr"
-        app:layout_constraintTop_toBottomOf="@+id/textViewDatosPersonales"
-        app:srcCompat="@drawable/baccode"
-        tools:srcCompat="@drawable/baccode" />
 
     <TextView
         android:id="@+id/textViewAviso"
-        android:layout_width="347dp"
-        android:layout_height="93dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_width="193dp"
+        android:layout_height="83dp"
+        android:layout_marginTop="175dp"
         android:layout_marginEnd="16dp"
         android:background="@drawable/borde"
         android:fontFamily="sans-serif-black"
@@ -67,8 +22,7 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageViewSacyr" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <FrameLayout
         android:id="@+id/contenedorFraments"
@@ -179,27 +133,93 @@
         app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
 
     <TextView
-        android:id="@+id/textViewRssi"
+        android:id="@+id/textViewRssiL"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginEnd="32dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="68dp"
         android:text="TextView"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButtonPanic" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <SeekBar
-        android:id="@+id/seekBarProximidad"
-        style="@android:style/Widget.Material.SeekBar"
-        android:layout_width="150dp"
-        android:layout_height="35dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
+        android:id="@+id/seekBarProximidadH"
+        style="@android:style/Widget.SeekBar"
+        android:layout_width="177dp"
+        android:layout_height="55dp"
+        android:layout_marginEnd="8dp"
         android:max="110"
         android:progress="1"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/radioButtonGPS"
+        android:progressTint="#03A9F4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textViewRssiH" />
+
+    <SeekBar
+        android:id="@+id/seekBarProximidadL"
+        style="@android:style/Widget.SeekBar"
+        android:layout_width="175dp"
+        android:layout_height="61dp"
+        android:layout_marginEnd="8dp"
+        android:max="110"
+        android:progress="1"
+        android:progressTint="#03A9F4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textViewRssiL" />
+
+    <TextView
+        android:id="@+id/textViewRssiH"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="68dp"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/seekBarProximidadL" />
+
+    <SeekBar
+        android:id="@+id/seekBarMaxTramas"
+        style="@android:style/Widget.SeekBar"
+        android:layout_width="177dp"
+        android:layout_height="55dp"
+        android:layout_marginStart="8dp"
+        android:max="10"
+        android:progress="1"
+        android:progressTint="#03A9F4"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textViewMaxTramas" />
+
+    <TextView
+        android:id="@+id/textViewMaxTramas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="64dp"
+        android:layout_marginTop="8dp"
+        android:background="#FFFFFF"
+        android:text="TextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/seekBarProximidadL" />
+
+    <TextView
+        android:id="@+id/textViewRssi"
+        android:layout_width="105dp"
+        android:layout_height="47dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="sans-serif-black"
+        android:text="TextView"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageBack" />
+
+    <EditText
+        android:id="@+id/editTextNumberDecimalQ"
+        android:layout_width="89dp"
+        android:layout_height="45dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="24dp"
+        android:ems="10"
+        android:inputType="numberDecimal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/seekBarMaxTramas" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
