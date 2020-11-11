@@ -8,10 +8,9 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
@@ -32,7 +31,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewAviso, textViewLastRssi;
     private ImageButton imageButtonPanic;
     private ImageButton imageButtonCancelManDown;
+    private Button cancelaProximidad;
     private boolean onMovement;
     private RadioButton radioButtonGPS;
     private RadioButton radioButtonGPRS;
@@ -334,10 +333,11 @@ public class MainActivity extends AppCompatActivity {
     //*****************************************************************************************************************
     private void setComponents() {
         try {
-            radioButtonGPRS =findViewById(R.id.radioButtonGPRS);
+            radioButtonGPRS = findViewById(R.id.radioButtonGPRS);
             radioButtonMOV = findViewById(R.id.radioButtonMOV);
             radioButtonGPS = findViewById(R.id.radioButtonGPS);
             textViewAviso = findViewById(R.id.textViewAviso);
+            cancelaProximidad = findViewById(R.id.toggleButtonCancelarAlarmaProximidad);
             textViewAviso.setMovementMethod(new ScrollingMovementMethod());
             soundCollection.add(R.raw.alarm1);
             soundCollection.add(R.raw.beep2);
@@ -417,6 +417,12 @@ public class MainActivity extends AppCompatActivity {
                     accionCancelada = true;
                 }
             });
+            cancelaProximidad.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                }
+            });
             setProgressControls();
             setButtonPanicActive(true);
             //Tools.setBluetoothOnOffCycle(1000);
@@ -432,30 +438,18 @@ public class MainActivity extends AppCompatActivity {
         textViewRssiE = findViewById(R.id.textViewRssiH);
         textViewRssiI = findViewById(R.id.textViewRssiL);
 
-        textViewLastRssi =  findViewById(R.id.textViewRssi);
+        textViewLastRssi = findViewById(R.id.textViewRssi);
         textViewMaxTramas = findViewById(R.id.textViewMaxTramas);
         textViewRssiE.setText("Ext:" + rssiProximityE + "dBm");
         textViewRssiI.setText("Int:" + rssiProximityI + "dBm");
 
         textViewMaxTramas.setText("Tramas:" + maxTramas);
         textViewLastRssi.setText("");
-        seekBarProximidadE =findViewById(R.id.seekBarProximidadH);
+        seekBarProximidadE = findViewById(R.id.seekBarProximidadH);
         seekBarProximidadI = findViewById(R.id.seekBarProximidadL);
         seekBarMaxTramas = findViewById(R.id.seekBarMaxTramas);
         seekBarProximidadE.setProgress(Math.abs(rssiProximityE));
         seekBarProximidadI.setProgress(Math.abs(rssiProximityI));
-        editTextNumberDecimalQ =  findViewById(R.id.editTextNumberDecimalQ);
-        editTextNumberDecimalQ.setText("1.4");
-        editTextNumberDecimalQ.setOnEditorActionListener(new EditText.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE ){
-                    muestraAviso(v.getText().toString());
-                    bs.setKalmanMeasurementNoise(Double.parseDouble(v.getText().toString().trim()));
-                }
-                return false;
-            }
-        });
 
         seekBarProximidadE.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -487,7 +481,7 @@ public class MainActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {
             }
         });
-           seekBarMaxTramas.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        seekBarMaxTramas.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 maxTramas = progress;
                 if (maxTramas <= 0) maxTramas = 1;
@@ -606,24 +600,24 @@ public class MainActivity extends AppCompatActivity {
     //*****************************************************************************************************************
     private void setBeacons() {
         try {
-            bs=new BeaconScanner();
-            bs.setibeaconMajorFilter(76,0x04D2);
+            bs = new BeaconScanner();
+            bs.setibeaconMajorFilter(76, 0x04D2);
             bs.setOnScanListener(new BeaconScanner.OnScanListener() {
                 @Override
                 public void onScan(BeaconScanner.Beacon b) {
                     checkAllBeacons(b);
-                    IBeacon ib=bs.parseIBeacon(b);
-                    textViewLastRssi.setText(""+b.filteredRssi+"dBm");
+                    IBeacon ib = bs.parseIBeacon(b);
+                    textViewLastRssi.setText("" + b.filteredRssi + "dBm");
                 }
             });
             startCheckOWNERZONE();
             startCheckPROXIMITY();
-            } catch (Exception e) {
+        } catch (Exception e) {
             Error("setBeacons:" + e.toString());
         }
     }
 
-       private void _startCheckPROXIMITY() {
+    private void _startCheckPROXIMITY() {
         try {
             _countDownTimerPROXIMITY = new CountDownTimer(Long.MAX_VALUE, TIMEOUT_CHK_PROXIMITY) {
                 public void onTick(long millisUntilFinished) {
@@ -938,8 +932,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         try {
-            String file = FILE_DATA + Calendar.getInstance().getTime().getTime() + ".txt";
-            salvaFileData(file, dataRssiCollection);
+            //String file = FILE_DATA + Calendar.getInstance().getTime().getTime() + ".txt";
+            //salvaFileData(file, dataRssiCollection);
             super.onDestroy();
             permissionHelper.onDestroy();
             android.os.Process.killProcess(android.os.Process.myPid());
@@ -988,7 +982,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //****************************************************************************************************************
-    private void __checkAllBeacons(BeaconScanner.Beacon  beacon) {
+    private void __checkAllBeacons(BeaconScanner.Beacon beacon) {
         try {
             if (isBeaconOWNERZONE(beacon)) {
             } else {
@@ -1060,7 +1054,7 @@ public class MainActivity extends AppCompatActivity {
             if (beaconOWNERZONE.size() > 0) {
                 String addr = beacon.beaconInfo.getDevice().getAddress();
                 if (beaconOWNERZONE.containsKey(addr)) {
-                    if (beacon.filteredRssi>= rssiOwnerZone) {
+                    if (beacon.filteredRssi >= rssiOwnerZone) {
                         Integer cont = beaconOWNERZONE.get(addr) + 1;
                         beaconOWNERZONE.put(addr, cont);
                     }
@@ -1099,6 +1093,7 @@ public class MainActivity extends AppCompatActivity {
     private void salvaFileData(String filePath, List<String> data) {
 
         try {
+
             if (data.size() <= 0) return;
             FileOutputStream outputStream = new FileOutputStream(new File(filePath));
             for (String b : data) {

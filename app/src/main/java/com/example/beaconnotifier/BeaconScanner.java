@@ -3,10 +3,10 @@ package com.example.beaconnotifier;
 /*
 gradle
 dependencies {
-implementation 'no.nordicsemi.android.support.v18:scanner:1.4.2'
-implementation 'com.neovisionaries:nv-bluetooth:1.8'
-
+    implementation 'no.nordicsemi.android.support.v18:scanner:1.4.2'
+    implementation 'com.neovisionaries:nv-bluetooth:1.8'
 }
+
 manifest
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -15,7 +15,40 @@ manifest
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
 https://github.com/TakahikoKawasaki/nv-bluetooth
+Use
+            bs=new BeaconScanner();
+            bs=new BeaconScanner(ScanSettings.SCAN_MODE_BALANCED,true/false) see:https://developer.android.com/reference/android/bluetooth/le/ScanSettings
+
+            bs.setibeaconMajorFilter(76,0x04D2);
+            bs.setOnScanListener(new BeaconScanner.OnScanListener() {
+                @Override
+                public void onScan(BeaconScanner.Beacon b) {
+                    IBeacon ib=bs.parseIBeacon(b);
+                }
+            });
+
+  bs.startScanner();
+  bs.stopScanner();
+  bs.setKalmanMeasurementNoise(double noise);
+  bs.setKalmanProcessNoise(double noise);
+  Kalman
+
+     * Constructor
+     *
+     * @param R Process noise (0.008)
+     * @param Q Measurement noise (deviation standard,3 or 4 con movimiento 20)
+     * @param A State vector .How a previous state effects a new state
+     * @param B Control vector. Here B is the control parameter and is multiplied by the control/action on each filter step
+     * @param C Measurement vector
+     *          R models the process noise and describes how noisy our system internally is
+     *          Or, in other words, how much noise can we expect from the system itself
+     *          As our system is constant we can set this to a (very) low value.
+     *          Q resembles the measurement noise; how much noise is caused by our measurements
+     *          As we expect that our measurements will contain most of the noise,
+     *          it makes sense to set this parameter to a high number (especially in comparison to the process noise).
+     *          The lower Q, the faster the system responds to changes (as it trusts the measurement more) but the more noisy it is.
  */
+
 
 import android.os.CountDownTimer;
 import android.util.Log;

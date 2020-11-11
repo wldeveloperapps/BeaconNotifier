@@ -10,8 +10,8 @@
 
     <TextView
         android:id="@+id/textViewAviso"
-        android:layout_width="193dp"
-        android:layout_height="83dp"
+        android:layout_width="387dp"
+        android:layout_height="99dp"
         android:layout_marginTop="175dp"
         android:layout_marginEnd="16dp"
         android:background="@drawable/borde"
@@ -211,15 +211,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageBack" />
 
-    <EditText
-        android:id="@+id/editTextNumberDecimalQ"
-        android:layout_width="89dp"
-        android:layout_height="45dp"
-        android:layout_marginStart="8dp"
+    <ToggleButton
+        android:id="@+id/toggleButtonCancelarAlarmaProximidad"
+        android:layout_width="128dp"
+        android:layout_height="41dp"
+        android:layout_marginStart="24dp"
         android:layout_marginTop="24dp"
-        android:ems="10"
-        android:inputType="numberDecimal"
+        android:text="ToggleButton"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/seekBarMaxTramas" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
