@@ -69,6 +69,12 @@ public class MainActivity extends AppCompatActivity {
     private final static String MQTT_DOWNLINK_TOPIC = "WILOC/SACYR/DOWNLINK";
     private final static String MQTT_CLIENTE = "CHK_SACYR";
 
+    private final static String FMQTT_APN = "tcp://mqtt.flespi.io:1883";
+    private final static String FMQTT_USR = "fWG9bnAyMpI5OBQZBMlj3RbgTYsYxljC5Oz71ZtBeZuRoaGQKPZDx1KgP03abaA5";
+    private final static String FMQTT_PASS = "";
+    private final static String FMQTT_ROOT_TOPIC = "flespi/message/gw/channels/33037";
+    private final static String FMQTT_CLIENTE = "";
+
     //*****************************************************************************************************************
     private BluetoothLeScannerCompat scanner;
     private List<ScanFilter> filters = new ArrayList<>();
@@ -151,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
     private MqttHelper mqttClient = null;
     private boolean onConnectMqtt = false;
     private String downlinkRoot = "";
+    private  android.app.Activity curActivity;
 
     //*****************************************************************************************************************
     @Override
@@ -158,16 +165,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Tools.setContext(getApplicationContext(), getWindow());
+        curActivity=this;
         setEntorno();
         setComponents();
         verifyBluetooth();
         checkPermisos();
-        setBeacons();
+        //setBeacons();
+        setBeaconsDecawave();
         setFragments();
-        setMqtt();
+        //setMqtt();
+        setFlespiMqtt();
         deviceId = UUID.randomUUID().toString();
         deviceId = "123456789";
         muestraAviso("Sistema inicializado:" + deviceId);
+
     }
 
     //*****************************************************************************************************************
@@ -205,7 +216,54 @@ public class MainActivity extends AppCompatActivity {
             Error("setMqtt:" + e.toString());
         }
     }
+    //*****************************************************************************************************************
+    private void setFlespiMqtt() {
+        try {
+            mqttClient = new MqttHelper(getApplicationContext(), FMQTT_APN, FMQTT_CLIENTE, FMQTT_USR, FMQTT_PASS);
+            mqttClient.setCallback(new MqttCallbackExtended() {
+                @Override
+                public void connectComplete(boolean b, String s) {
+                    onConnectMqtt = true;
+                    radioButtonGPRS.setChecked(onConnectMqtt);
+                    setFlespiMqttSubscriptions();
+                }
 
+                @Override
+                public void connectionLost(Throwable throwable) {
+                    onConnectMqtt = false;
+                    radioButtonGPRS.setChecked(onConnectMqtt);
+                }
+
+                @Override
+                public void messageArrived(String topic, MqttMessage mqttMessage) {
+                    setFlespiMqttMessage(topic, mqttMessage.toString());
+
+                }
+
+                @Override
+                public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+                }
+            });
+            if (mqttClient != null) mqttClient.connect();
+            downlinkRoot = MQTT_DOWNLINK_TOPIC + "/" + deviceId;
+        } catch (Exception e) {
+            Error("setMqtt:" + e.toString());
+        }
+    }
+
+
+    //*****************************************************************************************************************
+    private void setFlespiMqttMessage(String topic, String message) {
+
+    }
+    //*****************************************************************************************************************
+    private void setFlespiMqttSubscriptions() {
+        try {
+        } catch (Exception e) {
+            Error("setMqttSubscriptions:" + e.toString());
+        }
+    }
     //*****************************************************************************************************************
     private void setMqttMessage(String topic, String message) {
         if (!topic.contains(downlinkRoot)) return;
@@ -227,6 +285,12 @@ public class MainActivity extends AppCompatActivity {
     //*****************************************************************************************************************
     private void publica(String subtopic, String msg) {
         mqttClient.publish(mqttRootTopic + "/" + subtopic, msg, 0, false);
+    }
+    //*****************************************************************************************************************
+    private void publicaFlespi() {
+        String payload = "[{ \"address\":{ \"ident\":\"359633109606256\",\"type\":\"connection\"},\"name\":\"codec12\",\"properties\":{ \"payload\":\"setdigout 1 1\"},\"ttl\":86400}]";
+        String topic = "flespi/rest/post/gw/channels/33037/commands-queue/";
+        mqttClient.publish( topic, payload, 0, false);
     }
 
     //*****************************************************************************************************************
@@ -515,8 +579,9 @@ public class MainActivity extends AppCompatActivity {
     private void panic() {
         try {
             muestraAviso("Llamando a la central...");
-            alarma(2000);
+            //alarma(2000);
             //Tools.llamar("666972966");
+            //publicaFlespi();
         } catch (Exception e) {
             Error("panic:" + e.toString());
         }
@@ -612,6 +677,65 @@ public class MainActivity extends AppCompatActivity {
             });
             startCheckOWNERZONE();
             startCheckPROXIMITY();
+        } catch (Exception e) {
+            Error("setBeacons:" + e.toString());
+        }
+    }
+    class DW{
+        public byte len1;
+        public byte type1;
+        public byte data1;
+        public byte len2;
+        public byte type2;
+        public byte[] uuid=new byte[16];
+        public byte data2;
+        public byte len3;
+        public byte type3;
+        public byte[] data3=new byte[5];
+    }
+    //*****************************************************************************************************************
+    private void setBeaconsDecawave() {
+        List<String> mac=new ArrayList<>();
+        mac.add("D9:04:E0:64:35:1A");
+        try {
+            bs = new BeaconScanner();
+            bs.setMacFilter(mac);
+            DWPans2Ble2 dwPans2= new DWPans2Ble2(curActivity,true);
+            dwPans2.setCharacteristicReadListener(new DWPans2Ble2.OnCharacteristicReadListener() {
+                @Override
+                public void onCharteristicRead() {
+                    Log.d(TAG,"Distancias...");
+                    if(dwPans2.getDistancias().size()>0){
+
+                    }
+                    dwPans2.readDistances();
+                }
+            });
+            dwPans2.setOnConnectListener(new DWPans2Ble2.OnConnectListener() {
+                                             @Override
+                                             public void onConnected(boolean connected) {
+                                                 if(connected){
+
+                                                 }
+                                             }
+                                         });
+
+            dwPans2.setOnServiceListener(new DWPans2Ble2.OnServiceListener() {
+                                             @Override
+                                             public void onService(boolean ok, int status) {
+                                                if(ok){
+
+                                                }
+                                             }
+                                         });
+            bs.setOnScanListener(new BeaconScanner.OnScanListener() {
+                @Override
+                public void onScan(BeaconScanner.Beacon b) {
+                    bs.stopScanner();
+                    dwPans2.connect(b.beaconInfo.getDevice());
+
+                }
+            });
         } catch (Exception e) {
             Error("setBeacons:" + e.toString());
         }

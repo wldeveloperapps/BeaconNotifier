@@ -74,7 +74,7 @@ import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
 import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
-public class BeaconScanner {
+public class    BeaconScanner {
     protected static final String TAG = "BeaconScanner";
     private double KF_R = 0.065;
     private double KF_Q = 1.4;
@@ -367,7 +367,10 @@ public class BeaconScanner {
             throw e;
         }
     }
-
+    //********************************************************************************************************************
+    public static List<ADStructure> parseAD(Beacon b){
+       return ADPayloadParser.getInstance().parse(b.beaconInfo.getScanRecord().getBytes());
+    }
     //********************************************************************************************************************
     public static IBeacon parseIBeacon(Beacon b){
         List<ADStructure> structures =
@@ -386,7 +389,7 @@ public class BeaconScanner {
         List<ADStructure> structures =
                 ADPayloadParser.getInstance().parse(b.beaconInfo.getScanRecord().getBytes());
         for (ADStructure structure : structures) {
-            // If the ADStructure instance can be cast to IBeacon.
+            // If the ADStructure instance can be cast to Eddystone.
             if (structure instanceof EddystoneUID) {
                 // An iBeacon was found.
                 return (EddystoneUID ) structure;
@@ -399,7 +402,7 @@ public class BeaconScanner {
         List<ADStructure> structures =
                 ADPayloadParser.getInstance().parse(b.beaconInfo.getScanRecord().getBytes());
         for (ADStructure structure : structures) {
-            // If the ADStructure instance can be cast to IBeacon.
+            // If the ADStructure instance can be cast to Eddystone.
             if (structure instanceof EddystoneUID) {
                 // An iBeacon was found.
                 return (EddystoneURL  ) structure;
@@ -412,7 +415,7 @@ public class BeaconScanner {
         List<ADStructure> structures =
                 ADPayloadParser.getInstance().parse(b.beaconInfo.getScanRecord().getBytes());
         for (ADStructure structure : structures) {
-            // If the ADStructure instance can be cast to IBeacon.
+            // If the ADStructure instance can be cast to Eddystone.
             if (structure instanceof EddystoneUID) {
                 // An iBeacon was found.
                 return (EddystoneTLM   ) structure;
@@ -442,6 +445,7 @@ public class BeaconScanner {
                lastBeacon.filteredRssi=addRssiFilter(result.getDevice().getAddress(), result.getRssi());
                lastBeacon.beaconInfo=result;
                scanListener.onScan(lastBeacon);
+
             } catch (Exception e) {
                throw e;
             }

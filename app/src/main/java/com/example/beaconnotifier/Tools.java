@@ -23,26 +23,37 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.UUID;
+
 import static android.content.Context.BATTERY_SERVICE;
 
 public class Tools {
     private static final String TAG = "Tools";
 
-    private static Context ctx=null;
+    private static Context ctx = null;
     private static android.view.Window win;
-    public static final int VIBRACION_TIPO_OFF=0;
-    public static final int VIBRACION_TIPO_1=1;
-    public static final int VIBRACION_TIPO_TICK=2;
-    public static final int VIBRACION_TIPO_CONTINUO=3;
+    public static final int VIBRACION_TIPO_OFF = 0;
+    public static final int VIBRACION_TIPO_1 = 1;
+    public static final int VIBRACION_TIPO_TICK = 2;
+    public static final int VIBRACION_TIPO_CONTINUO = 3;
+    private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
-    static public void setContext(Context applicationContext,android.view.Window w){
-        ctx=applicationContext;
-        win=w;
+    //*****************************************************************************************************************
+    static public void setContext(Context applicationContext, android.view.Window w) {
+        ctx = applicationContext;
+        win = w;
         VibradorHelper.init(ctx);
     }
+
     //*****************************************************************************************************************
-    public static int getBatteryLevel(){
-        int batLevel=0;
+    public static int getBatteryLevel() {
+        int batLevel = 0;
         try {
             BatteryManager bm = (BatteryManager) ctx.getSystemService(BATTERY_SERVICE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -57,6 +68,7 @@ public class Tools {
     //****************************************************************************************************************
     static public void setBrillo(int porcentaje) {
     }
+
     //****************************************************************************************************************
     static public void _setBrillo(int porcentaje) {
         float brightness = porcentaje / (float) 255;
@@ -68,7 +80,7 @@ public class Tools {
     //****************************************************************************************************************
     static public void vibra(int tipo) {
         try {
-            switch(tipo){
+            switch (tipo) {
                 case VIBRACION_TIPO_1:
                     VibradorHelper.makePattern()
                             .beat(200)
@@ -96,22 +108,22 @@ public class Tools {
     }
 
 
-
     //***********************************************************************************************************
     static public void soundRing(int tipo, int timeout) {
 
         try {
             Uri notification = RingtoneManager.getDefaultUri(tipo);
             final Ringtone r = RingtoneManager.getRingtone(ctx, notification);
-            if(timeout<=0){
+            if (timeout <= 0) {
                 r.stop();
-            }else{
+            } else {
                 r.play();
             }
-            if(timeout>0) {
+            if (timeout > 0) {
                 new CountDownTimer(timeout, timeout) {
                     public void onTick(long millisUntilFinished) {
                     }
+
                     public void onFinish() {
                         r.stop();
                     }
@@ -171,10 +183,12 @@ public class Tools {
     static public void debug(String str, int tipo) {
         Toast.makeText(ctx, str, tipo).show();
     }
+
     //**************************************************************************************************************
     static public boolean bluetoothAvailable() {
         return BluetoothAdapter.getDefaultAdapter() != null;
     }
+
     //**************************************************************************************************************
     static public boolean bluetoothEnabled() {
         return BluetoothAdapter.getDefaultAdapter().isEnabled();
@@ -182,21 +196,23 @@ public class Tools {
 
     //**************************************************************************************************************
     static public boolean gpsLocationEnabled() {
-        LocationManager lm=(LocationManager)ctx.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         return lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
     }
+
     //**************************************************************************************************************
     static public boolean netLocationEnabled() {
-        LocationManager lm=(LocationManager)ctx.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         return lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
+
     //**************************************************************************************************************
     static public void enableBluetooth(boolean enable) {
         try {
             BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            if(enable){
+            if (enable) {
                 if (!mBluetoothAdapter.isEnabled()) mBluetoothAdapter.enable();
-            }else{
+            } else {
                 if (mBluetoothAdapter.isEnabled()) {
                     mBluetoothAdapter.disable();
 
@@ -208,37 +224,38 @@ public class Tools {
     }
 
     //**************************************************************************************************************
-    static public void setBluetoothOnOffCycle(final int msec){
-        if(!BluetoothAdapter.getDefaultAdapter().isEnabled()){
+    static public void setBluetoothOnOffCycle(final int msec) {
+        if (!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
             BluetoothAdapter.getDefaultAdapter().enable();
             return;
         }
         try {
             final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-               @Override
-               public void onReceive(Context context, Intent intent) {
-                   final String action = intent.getAction();
-                   if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                       final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
-                               BluetoothAdapter.ERROR);
-                       switch (state) {
-                           case BluetoothAdapter.STATE_OFF:
-                               new Handler().postDelayed(new Runnable() {
-                                   @Override
-                                   public void run() {
-                                       BluetoothAdapter.getDefaultAdapter().enable();
-                                   }}, msec);
-                               break;
-                           case BluetoothAdapter.STATE_TURNING_OFF:
-                               break;
-                           case BluetoothAdapter.STATE_ON:
-                               break;
-                           case BluetoothAdapter.STATE_TURNING_ON:
-                               break;
-                       }
-                   }
-               }
-           };
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final String action = intent.getAction();
+                    if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                        final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
+                                BluetoothAdapter.ERROR);
+                        switch (state) {
+                            case BluetoothAdapter.STATE_OFF:
+                                new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        BluetoothAdapter.getDefaultAdapter().enable();
+                                    }
+                                }, msec);
+                                break;
+                            case BluetoothAdapter.STATE_TURNING_OFF:
+                                break;
+                            case BluetoothAdapter.STATE_ON:
+                                break;
+                            case BluetoothAdapter.STATE_TURNING_ON:
+                                break;
+                        }
+                    }
+                }
+            };
             BluetoothAdapter.getDefaultAdapter().disable();
             ctx.registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
         } catch (Exception e) {
@@ -258,7 +275,8 @@ public class Tools {
         }
     }
 
-    public static void sms(String datos,String tfno) {
+    //*****************************************************************************************************************
+    public static void sms(String datos, String tfno) {
         try {
 
             SmsManager sms = SmsManager.getDefault();
@@ -267,22 +285,89 @@ public class Tools {
             throw e;
         }
     }
+
+    //*****************************************************************************************************************
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
             data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i+1), 16));
+                    + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
     }
 
+    //*****************************************************************************************************************
+    public static byte[] serialize(Serializable value) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ObjectOutputStream outputStream = new ObjectOutputStream(out)) {
+            outputStream.writeObject(value);
+        }
+        return out.toByteArray();
+    }
 
+    //*****************************************************************************************************************
+    public static <T extends Serializable> T deserialize(byte[] data) throws IOException, ClassNotFoundException {
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(data)) {
+            return (T) new ObjectInputStream(bis).readObject();
+        }
+    }
 
-   //new Handler().postDelayed(new Runnable() {
-//        @Override
-//        public void run() {
-//            BluetoothAdapter.getDefaultAdapter().enable();
-//        }}, 500);
+    //*****************************************************************************************************************
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+
+        return new String(hexChars);
+    }
+    //*****************************************************************************************************************
+    public static String bytesToHexReverse(byte[] array) {
+        for(int i=0; i<array.length/2; i++){
+            int temp = array[i];
+            array[i] = array[array.length -i -1];
+            array[array.length -i -1] = (byte) temp;
+        }
+
+        char[] hexChars = new char[array.length * 2];
+
+        for (int j = 0; j < array.length; j++) {
+            int v = array[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+
+        return new String(hexChars);
+    }
+
+    //*****************************************************************************************************************
+    public static byte[] hexToBytes(String hexRepresentation) {
+        if (hexRepresentation.length() % 2 == 1) {
+            throw new IllegalArgumentException("hexToBytes requires an even-length String parameter");
+        }
+
+        int len = hexRepresentation.length();
+        byte[] data = new byte[len / 2];
+
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hexRepresentation.charAt(i), 16) << 4)
+                    + Character.digit(hexRepresentation.charAt(i + 1), 16));
+        }
+
+        return data;
+    }
+
+    //*****************************************************************************************************************
+    //HEART_RATE_CONTROL_POINT_CHAR_UUID = convertFromInteger(0x2A39)
+    public static UUID convertFromInteger(int i) {
+        final long MSB = 0x0000000000001000L;
+        final long LSB = 0x800000805f9b34fbL;
+        long value = i & 0xFFFFFFFF;
+        return new UUID(MSB | (value << 32), LSB);
+    }
 
 }
