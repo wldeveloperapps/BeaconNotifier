@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
     private MqttHelper mqttClient = null;
     private boolean onConnectMqtt = false;
     private String downlinkRoot = "";
-    private  android.app.Activity curActivity;
+    private android.app.Activity curActivity;
 
     //*****************************************************************************************************************
     @Override
@@ -165,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Tools.setContext(getApplicationContext(), getWindow());
-        curActivity=this;
+        curActivity = this;
         setEntorno();
         setComponents();
         verifyBluetooth();
@@ -216,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
             Error("setMqtt:" + e.toString());
         }
     }
+
     //*****************************************************************************************************************
     private void setFlespiMqtt() {
         try {
@@ -257,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
     private void setFlespiMqttMessage(String topic, String message) {
 
     }
+
     //*****************************************************************************************************************
     private void setFlespiMqttSubscriptions() {
         try {
@@ -264,6 +266,7 @@ public class MainActivity extends AppCompatActivity {
             Error("setMqttSubscriptions:" + e.toString());
         }
     }
+
     //*****************************************************************************************************************
     private void setMqttMessage(String topic, String message) {
         if (!topic.contains(downlinkRoot)) return;
@@ -286,11 +289,12 @@ public class MainActivity extends AppCompatActivity {
     private void publica(String subtopic, String msg) {
         mqttClient.publish(mqttRootTopic + "/" + subtopic, msg, 0, false);
     }
+
     //*****************************************************************************************************************
     private void publicaFlespi() {
         String payload = "[{ \"address\":{ \"ident\":\"359633109606256\",\"type\":\"connection\"},\"name\":\"codec12\",\"properties\":{ \"payload\":\"setdigout 1 1\"},\"ttl\":86400}]";
         String topic = "flespi/rest/post/gw/channels/33037/commands-queue/";
-        mqttClient.publish( topic, payload, 0, false);
+        mqttClient.publish(topic, payload, 0, false);
     }
 
     //*****************************************************************************************************************
@@ -681,66 +685,70 @@ public class MainActivity extends AppCompatActivity {
             Error("setBeacons:" + e.toString());
         }
     }
-    class DW{
+
+    class DW {
         public byte len1;
         public byte type1;
         public byte data1;
         public byte len2;
         public byte type2;
-        public byte[] uuid=new byte[16];
+        public byte[] uuid = new byte[16];
         public byte data2;
         public byte len3;
         public byte type3;
-        public byte[] data3=new byte[5];
+        public byte[] data3 = new byte[5];
     }
-    //*****************************************************************************************************************
+
+    //*****************************************************************************************************************G A T T interface
+    DWPans2Ble2 dwPans2;
     private void setBeaconsDecawave() {
-        List<String> mac=new ArrayList<>();
-        mac.add("D9:04:E0:64:35:1A");
+        List<String> mac = new ArrayList<>();
         try {
+            mac.add("D9:04:E0:64:35:1A");
+            //mac.add("F6:C5:96:AE:B9:26");
             bs = new BeaconScanner();
             bs.setMacFilter(mac);
-            DWPans2Ble2 dwPans2= new DWPans2Ble2(curActivity,true);
-            dwPans2.setCharacteristicReadListener(new DWPans2Ble2.OnCharacteristicReadListener() {
+            dwPans2 = new DWPans2Ble2(curActivity, true,new DWPans2Ble2.typeUpdateRate(500,500));
+            dwPans2.setOnDistanceListener(new DWPans2Ble2.OnDistanceListener() {
                 @Override
-                public void onCharteristicRead() {
-                    Log.d(TAG,"Distancias...");
-                    if(dwPans2.getDistancias().size()>0){
-
+                public void onDistance(String id, double meters) {
+                    Log.d(TAG, String.format("%s->%.2f", id,meters));
+                    muestraAviso(String.format("%.2f",meters));
+                    if(meters<9.0) {
+                        if(meters<5.0)
+                            muestraAviso("ALARMA!!!!");
+                        else
+                            muestraAviso("pREALARMA");
                     }
-                    dwPans2.readDistances();
                 }
             });
             dwPans2.setOnConnectListener(new DWPans2Ble2.OnConnectListener() {
-                                             @Override
-                                             public void onConnected(boolean connected) {
-                                                 if(connected){
-
-                                                 }
-                                             }
-                                         });
-
-            dwPans2.setOnServiceListener(new DWPans2Ble2.OnServiceListener() {
-                                             @Override
-                                             public void onService(boolean ok, int status) {
-                                                if(ok){
-
-                                                }
-                                             }
-                                         });
+                @Override
+                public void onConnected(boolean connected) {
+                    Log.d(TAG,String.format("%s",connected?"Connected":"Disconnected"));
+                    if(connected)
+                        muestraAviso("Conectado");
+                    else {
+                        muestraAviso("Desconectado");
+                        bs.startScanner();
+                    }
+                }
+            });
             bs.setOnScanListener(new BeaconScanner.OnScanListener() {
                 @Override
                 public void onScan(BeaconScanner.Beacon b) {
                     bs.stopScanner();
-                    dwPans2.connect(b.beaconInfo.getDevice());
-
+                    dwPans2.connect(b.beaconInfo.getDevice(),true);
                 }
             });
+            Log.d(TAG, "Scanning....");
+            bs.startScanner();
         } catch (Exception e) {
             Error("setBeacons:" + e.toString());
         }
     }
 
+    //*****************************************************************************************************************
     private void _startCheckPROXIMITY() {
         try {
             _countDownTimerPROXIMITY = new CountDownTimer(Long.MAX_VALUE, TIMEOUT_CHK_PROXIMITY) {

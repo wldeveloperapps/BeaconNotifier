@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.UUID;
 
 import static android.content.Context.BATTERY_SERVICE;
@@ -363,11 +365,92 @@ public class Tools {
 
     //*****************************************************************************************************************
     //HEART_RATE_CONTROL_POINT_CHAR_UUID = convertFromInteger(0x2A39)
-    public static UUID convertFromInteger(int i) {
+    public static UUID convertUUIDFromInteger(int i) {
         final long MSB = 0x0000000000001000L;
         final long LSB = 0x800000805f9b34fbL;
         long value = i & 0xFFFFFFFF;
         return new UUID(MSB | (value << 32), LSB);
     }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToLeShort(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getShort(index);
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToBeShort(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getShort(index);
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToLeShortUnsigned(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getShort(index) & 0xFFFF;
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToBeShortUnsigned(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getShort(index) & 0xFFFF;
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToLeInt(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getInt(index);
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToBeInt(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getInt(index);
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToLeIntUnsigned(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        return bb.getInt(index) & 0xFFFFFFFF;
+    }
+
+    //*********************************************************************************************************************************************/
+    public static int byteArrayToBeIntUnsigned(byte[] b, int index) {
+        final ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        return bb.getInt(index) & 0xFFFFFFF;
+    }
+
+    //*********************************************************************************************************************************************/
+    public static byte[] intToBytesBe( final int i ) {
+        ByteBuffer bb = ByteBuffer.allocate(4);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.putInt(i);
+        return bb.array();
+    }
+
+    //*********************************************************************************************************************************************/
+    public static byte[] intToBytesLe( final int i ) {
+        ByteBuffer bb = ByteBuffer.allocate(4);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.putInt(i);
+        return bb.array();
+    }
+
+    //*********************************************************************************************************************************************/
+    public static byte[] concatByteArray( byte[] a,byte[] b) {
+        byte[] c = new byte[a.length + b.length];
+        System.arraycopy(a, 0, c, 0, a.length);
+        System.arraycopy(b, 0, c, a.length, b.length);
+        return c;
+    }
+
 
 }
